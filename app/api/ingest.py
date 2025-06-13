@@ -24,7 +24,7 @@ def ingest_feed(request: IngestRequest):
     logger.info(f"Received ingest request for URL: {request.url}")
     try:
         result = process_feed(request.url)
-        logger.info(f"Ingest successful: {request.url} -> {result['post_count']} posts")
+        logger.info(f"Ingest successful: {request.url} -> {result.post_count} posts")
         return result
     except Exception as e:
         logger.exception(f"Ingest failed for URL: {request.url}")
