@@ -3,6 +3,9 @@ from app.api.ingest import router as ingest_router
 from app.db.database import init_db
 from app.services.scheduler import start_scheduler
 from apscheduler.schedulers.background import BackgroundScheduler
+from app.api.themes import router as themes_router
+import atexit
+import multiprocessing.util
 
 import logging
 
@@ -16,20 +19,23 @@ app = FastAPI(title="Culldron Insight Extractor")
 
 @app.on_event("startup")
 def on_startup():
-    try:
-        init_db()
-        logger.info("Database initialized.")
-    except Exception as e:
-        logger.exception("Failed to initialize database.")
+    init_db()
+    logger.info("Database initialized.")
+    start_scheduler()
+    logger.info("Scheduler started.")
 
+@atexit.register
+def cleanup_multiprocessing():
     try:
-        start_scheduler()
-        logger.info("Scheduler started.")
-    except Exception as e:
-        logger.exception("Failed to start scheduler.")
+        multiprocessing.util._cleanup()
+    except Exception:
+        pass
 
 @app.get("/")
 def root():
     return {"message": "Culldron Insight Extractor is running."}
 
 app.include_router(ingest_router, prefix="/ingest", tags=["Ingest"])
+
+app.include_router(themes_router, tags=["Themes"])
+
