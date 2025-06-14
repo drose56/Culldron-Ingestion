@@ -28,7 +28,7 @@ _model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Constants for processing logic
 MAX_SENTENCES = 2
-SIMILARITY_THRESHOLD = 0.50 # For deciding whether to extract one or two thesis sentences
+SIMILARITY_THRESHOLD = 0.60
 THEME_MATCH_THRESHOLD = float(os.getenv("THEME_MATCH_THRESHOLD", "0.60"))
 
 
@@ -69,7 +69,7 @@ class FeedIngestResponse(BaseModel):
 def _extract_thesis(text: str) -> list[str]:
     """
     Extracts the key thesis sentence(s) from the input text using sentence transformers and similarity checks.
-    Returns up to MAX_SENTENCES (2), or 1 if the two sentences have cosign similarity above SIMILARITY_THRESHOLD (0.7).
+    Returns up to MAX_SENTENCES (2), or 1 if the two sentences have similarity above SIMILARITY_THRESHOLD (0.6).
     """
     sentences = nltk.sent_tokenize(text)
     if not sentences:
@@ -128,6 +128,28 @@ def _parse_date(entry) -> datetime:
     return datetime.utcnow()
 
 
+def _generate_embedding(title: str, thesis: str):
+    """
+    Combines the title and thesis and returns a sentence embedding.
+    """
+    return _model.encode(f"{title}. {thesis}", convert_to_tensor=True)
+
+
+def _match_theme(cand_emb, embeddings):
+    """
+    Matches a candidate post against a list of embeddings to find the most similar theme.
+    Returns the best theme_id and its similarity score.
+    """
+    best_theme = None
+    best_score = 0.0
+    for emb, theme_id in embeddings:
+        sim = util.cos_sim(cand_emb, emb).item()
+        if sim > best_score:
+            best_score = sim
+            best_theme = theme_id
+    return best_theme, best_score
+
+
 def process_feed(feed_url: str) -> FeedIngestResponse:
     """
     Parses and ingests an RSS feed, extracts thesis sentences from each post, assigns themes using embeddings,
@@ -144,7 +166,6 @@ def process_feed(feed_url: str) -> FeedIngestResponse:
         logger.error(f"Feedparser bozo error: {parsed.bozo_exception}")
         raise HTTPException(status_code=422, detail="Invalid or unreadable feed format.")
 
-
     if not parsed.entries:
         logger.info(f"No entries found in feed: {feed_url}")
         return {
@@ -155,10 +176,9 @@ def process_feed(feed_url: str) -> FeedIngestResponse:
     posts: List[dict] = []
 
     with Session(engine) as session:
-        # Fetch existing posts for comparison
         existing_posts = session.exec(select(Post.title, Post.thesis, Post.theme_id)).all()
         existing_embeddings = [
-            (_model.encode(f"{title}. {thesis}", convert_to_tensor=True), theme_id)
+            (_generate_embedding(title, thesis), theme_id)
             for title, thesis, theme_id in existing_posts
         ]
 
@@ -167,14 +187,12 @@ def process_feed(feed_url: str) -> FeedIngestResponse:
         )
         seen_keys = set(existing_keys)
 
-        # Prepare all new candidate posts
         candidates = []
         for entry in parsed.entries:
             title = entry.get("title", "")
             post_url = entry.get("link")
             content = _extract_main_text(entry)
             published_at = _parse_date(entry)
-            # Simple deduplication check: same URL, title, and published date
             key = (post_url, published_at, title)
             if key in seen_keys:
                 continue
@@ -183,8 +201,7 @@ def process_feed(feed_url: str) -> FeedIngestResponse:
             if not thesis_sentences:
                 continue
             full_thesis = " ".join(thesis_sentences)
-            emb = _model.encode(f"{title}. {full_thesis}", convert_to_tensor=True)
-
+            emb = _generate_embedding(title, full_thesis)
 
             candidates.append(PostCandidate(
                 title=title,
@@ -195,37 +212,23 @@ def process_feed(feed_url: str) -> FeedIngestResponse:
                 embedding=emb
             ))
 
-        # Assign themes across all candidates
         new_embeddings: List[Tuple[Any, int]] = []
         for cand in candidates:
             found_theme = None
-
-            # Check against existing DB
-            best_theme = None
-            best_score = 0.0
-
-            # Check existing themes
-            for emb, theme_id in existing_embeddings + new_embeddings:
-                sim = util.cos_sim(cand.embedding, emb).item()
-                if sim > best_score:
-                    best_score = sim
-                    best_theme = theme_id
+            best_theme, best_score = _match_theme(cand.embedding, existing_embeddings + new_embeddings)
 
             if best_score >= THEME_MATCH_THRESHOLD:
                 found_theme = best_theme
             else:
-                # Create new theme
                 new_theme = Theme()
                 session.add(new_theme)
                 session.commit()
                 session.refresh(new_theme)
                 found_theme = new_theme.id
 
-
             cand.theme_id = found_theme
             new_embeddings.append((cand.embedding, found_theme))
 
-        # Store new posts
         for cand in candidates:
             try:
                 session.add(Post(
