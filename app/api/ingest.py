@@ -26,6 +26,9 @@ def ingest_feed(request: IngestRequest):
         result = process_feed(request.url)
         logger.info(f"Ingest successful: {request.url} -> {result.post_count} posts")
         return result
+    except HTTPException as e:
+        logger.error(f"Ingest failed for URL: {request.url}")
+        raise e
     except Exception as e:
-        logger.exception(f"Ingest failed for URL: {request.url}")
-        raise HTTPException(status_code=500, detail=f"Failed to parse feed: {e}")
+        logger.exception(f"Unexpected error while ingesting {request.url}")
+        raise HTTPException(status_code=500, detail="Unexpected server error")
