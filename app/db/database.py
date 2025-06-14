@@ -3,7 +3,7 @@ from sqlmodel import SQLModel, create_engine, Session
 import logging
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/data.db")
 
 connect_args = (
     {"check_same_thread": False}
