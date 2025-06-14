@@ -88,7 +88,7 @@ Use K-Means or other more advanced techniques to help select the best sentences
 
 Store data on the feed such as last-seen timestamp to immediately skip unmodified content
 
-Add tests and auth support
+Add a lot more testing and auth support
 
 # License
 MIT
