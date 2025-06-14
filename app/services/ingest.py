@@ -7,6 +7,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from typing import List, Optional, Any, Tuple
 import re
+from fastapi import HTTPException
 
 from sqlmodel import Session, select
 from pydantic import BaseModel
@@ -21,7 +22,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-nltk.download("punkt", quiet=True)
+nltk.download("punkt_tab", quiet=True)
 
 _model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -133,7 +134,16 @@ def process_feed(feed_url: str) -> FeedIngestResponse:
     and stores results in the database. Returns a structured summary of all processed posts.
     """
     logger.info(f"Processing feed: {feed_url}")
-    parsed = feedparser.parse(feed_url)
+    try:
+        parsed = feedparser.parse(feed_url)
+    except Exception as e:
+        logger.error(f"Feed parsing failed: {e}")
+        raise HTTPException(status_code=400, detail="Unable to parse feed URL.")
+
+    if parsed.bozo:
+        logger.error(f"Feedparser bozo error: {parsed.bozo_exception}")
+        raise HTTPException(status_code=422, detail="Invalid or unreadable feed format.")
+
 
     if not parsed.entries:
         logger.info(f"No entries found in feed: {feed_url}")
