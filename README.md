@@ -60,6 +60,8 @@ docker-compose up
 ```
 App will be available at: http://localhost:8000
 
+The app will create a directory called data, and inside of it is the database file which you can delete if you wish to reset the database.
+
 ## How It Works
 
 - For each post, the main content is cleaned, tokenized, and the most representative 1–2 sentences are selected.
