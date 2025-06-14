@@ -84,6 +84,8 @@ Persist and reuse embeddings
 
 Use pgvector or other vector search backend
 
+Use K-Means or other more advanced techniques to help select the best sentences
+
 Store data on the feed such as last-seen timestamp to immediately skip unmodified content
 
 Add tests and auth support
