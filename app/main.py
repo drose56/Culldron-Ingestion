@@ -22,7 +22,6 @@ def on_startup():
     init_db()
     logger.info("Database initialized.")
     start_scheduler()
-    logger.info("Scheduler started.")
 
 @atexit.register
 def cleanup_multiprocessing():

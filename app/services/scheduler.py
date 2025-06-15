@@ -24,6 +24,10 @@ def scheduled_ingest():
             logger.exception(f"Error ingesting {url}")
 
 def start_scheduler():
+    if not FEED_URLS or SCHEDULER_INTERVAL_SECONDS <= 0:
+        logger.warning("Scheduler not started: FEED_URLS is empty or INGEST_INTERVAL_SECONDS is invalid/missing.")
+        return
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         func=scheduled_ingest,
@@ -33,3 +37,5 @@ def start_scheduler():
         replace_existing=True
     )
     scheduler.start()
+    logger.info(f"Scheduler started: ingesting every {SCHEDULER_INTERVAL_SECONDS} seconds.")
+

@@ -10,4 +10,4 @@ services:
     volumes:
       - .:/app
       - ./data:/app/data
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "pytest && uvicorn app.main:app --host 0.0.0.0 --port 8000"

@@ -78,23 +78,23 @@ def _extract_thesis(text: str) -> list[str]:
     if len(sentences) <= MAX_SENTENCES:
         if len(sentences) == MAX_SENTENCES:
             sim = util.cos_sim(
-                _model.encode(sentences[0], convert_to_tensor=True),
-                _model.encode(sentences[1], convert_to_tensor=True),
+                _model.encode(sentences[0], convert_to_tensor=True, show_progress_bar=False),
+                _model.encode(sentences[1], convert_to_tensor=True, show_progress_bar=False),
             ).item()
             if sim > SIMILARITY_THRESHOLD:
                 return [sentences[0]]
         return sentences
 
-    doc_emb = _model.encode(text, convert_to_tensor=True)
-    sent_embs = _model.encode(sentences, convert_to_tensor=True)
+    doc_emb = _model.encode(text, convert_to_tensor=True, show_progress_bar=False)
+    sent_embs = _model.encode(sentences, convert_to_tensor=True, show_progress_bar=False)
     sims = util.cos_sim(doc_emb, sent_embs)[0].cpu().numpy()
     top_idxs = np.argsort(-sims)[:MAX_SENTENCES].tolist()
     picks = [sentences[i] for i in top_idxs]
 
     if len(picks) == MAX_SENTENCES:
         sim = util.cos_sim(
-            _model.encode(picks[0], convert_to_tensor=True),
-            _model.encode(picks[1], convert_to_tensor=True),
+            _model.encode(picks[0], convert_to_tensor=True, show_progress_bar=False),
+            _model.encode(picks[1], convert_to_tensor=True, show_progress_bar=False),
         ).item()
         if sim > SIMILARITY_THRESHOLD:
             return [picks[0]]
@@ -132,7 +132,7 @@ def _generate_embedding(title: str, thesis: str):
     """
     Combines the title and thesis and returns a sentence embedding.
     """
-    return _model.encode(f"{title}. {thesis}", convert_to_tensor=True)
+    return _model.encode(f"{title}. {thesis}", convert_to_tensor=True, show_progress_bar=False)
 
 
 def _match_theme(cand_emb, embeddings):
