@@ -4,6 +4,10 @@ This is a lightweight NLP-powered service that ingests RSS feeds, extracts key t
 
 ---
 
+## Demo Video
+
+https://vimeo.com/1093430000/fcaef650ba?share=copy
+
 ## Features
 
 - **Scheduled + Manual Ingestion**  
@@ -22,7 +26,7 @@ This is a lightweight NLP-powered service that ingests RSS feeds, extracts key t
   - `GET /themes`: lists all themes with post counts (sorted by count)
   - `GET /themes/{id}`: timeline of posts in a theme (sorted by published date)
 
-- **Auto-generated API docs** at  
+- **See auto-generated API docs and call endpoints** at  
    [`http://localhost:8000/docs#/`](http://localhost:8000/docs#/)
 
 ---
